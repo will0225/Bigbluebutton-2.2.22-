@@ -11,7 +11,6 @@ import ChatService from './service';
 const CHAT_CONFIG = Meteor.settings.public.chat;
 const PUBLIC_CHAT_KEY = CHAT_CONFIG.public_id;
 const CHAT_CLEAR = CHAT_CONFIG.system_messages_keys.chat_clear;
-const SYSTEM_CHAT_TYPE = CHAT_CONFIG.type_system;
 const ROLE_MODERATOR = Meteor.settings.public.user.role_moderator;
 const CONNECTION_STATUS = 'online';
 
@@ -89,34 +88,31 @@ export default injectIntl(withTracker(({ intl }) => {
       sender: null,
     };
 
-    let moderatorMsg;
+    const moderatorTime = time + 1;
+    const moderatorId = `moderator-msg-${moderatorTime}`;
     const modOnlyMessage = Storage.getItem('ModeratorOnlyMessage');
-    if (amIModerator && modOnlyMessage) {
-      const moderatorTime = time + 1;
-      const moderatorId = `moderator-msg-${moderatorTime}`;
 
-      moderatorMsg = {
+    const moderatorMsg = {
+      id: moderatorId,
+      content: [{
         id: moderatorId,
-        content: [{
-          id: moderatorId,
-          text: modOnlyMessage,
-          time: moderatorTime,
-        }],
+        text: modOnlyMessage,
         time: moderatorTime,
-        sender: null,
-      };
-    }
+      }],
+      time: moderatorTime,
+      sender: null,
+    };
 
-    const messagesBeforeWelcomeMsg = ChatService.reduceAndDontMapGroupMessages(
+    const messagesBeforeWelcomeMsg = ChatService.reduceAndMapGroupMessages(
       messages.filter(message => message.timestamp < time),
     );
-    const messagesAfterWelcomeMsg = ChatService.reduceAndDontMapGroupMessages(
+    const messagesAfterWelcomeMsg = ChatService.reduceAndMapGroupMessages(
       messages.filter(message => message.timestamp >= time),
     );
 
     const messagesFormated = messagesBeforeWelcomeMsg
       .concat(welcomeMsg)
-      .concat((amIModerator && modOnlyMessage) || [])
+      .concat((amIModerator && modOnlyMessage) ? moderatorMsg : [])
       .concat(messagesAfterWelcomeMsg);
 
     messages = messagesFormated.sort((a, b) => (a.time - b.time));
@@ -154,15 +150,15 @@ export default injectIntl(withTracker(({ intl }) => {
   }
 
   messages = messages.map((message) => {
-    if (message.sender && message.sender !== SYSTEM_CHAT_TYPE) return message;
+    if (message.sender) return message;
 
     return {
       ...message,
-      content: message.content ? message.content.map(content => ({
+      content: message.content.map(content => ({
         ...content,
         text: content.text in intlMessages
           ? `<b><i>${intl.formatMessage(intlMessages[content.text], systemMessageIntl)}</i></b>` : content.text,
-      })) : [],
+      })),
     };
   });
 

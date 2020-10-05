@@ -1,12 +1,10 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import cx from 'classnames';
-import { isMobile, isIPad13 } from 'react-device-detect';
+import Settings from '/imports/ui/services/settings';
 import WebcamDraggable from './webcam-draggable-overlay/component';
-import { styles } from './styles';
-import Storage from '../../services/storage/session';
 
-const BROWSER_ISMOBILE = isMobile || isIPad13;
+import { styles } from './styles';
 
 const propTypes = {
   children: PropTypes.element.isRequired,
@@ -16,7 +14,7 @@ const propTypes = {
   swapLayout: PropTypes.bool,
   disableVideo: PropTypes.bool,
   audioModalIsOpen: PropTypes.bool,
-  layoutContextState: PropTypes.instanceOf(Object).isRequired,
+  webcamPlacement: PropTypes.string,
 };
 
 const defaultProps = {
@@ -25,6 +23,7 @@ const defaultProps = {
   swapLayout: false,
   disableVideo: false,
   audioModalIsOpen: false,
+  webcamPlacement: 'top',
 };
 
 
@@ -32,6 +31,10 @@ export default class Media extends Component {
   constructor(props) {
     super(props);
     this.refContainer = React.createRef();
+  }
+
+  componentWillUpdate() {
+    window.dispatchEvent(new Event('resize'));
   }
 
   render() {
@@ -43,12 +46,8 @@ export default class Media extends Component {
       children,
       audioModalIsOpen,
       usersVideo,
-      layoutContextState,
+      webcamPlacement,
     } = this.props;
-
-    const { webcamsPlacement: placement } = layoutContextState;
-    const placementStorage = Storage.getItem('webcamsPlacement');
-    const webcamsPlacement = placement || placementStorage;
 
     const contentClassName = cx({
       [styles.content]: true,
@@ -57,68 +56,39 @@ export default class Media extends Component {
     const overlayClassName = cx({
       [styles.overlay]: true,
       [styles.hideOverlay]: hideOverlay,
-      [styles.floatingOverlay]: (webcamsPlacement === 'floating'),
+      [styles.floatingOverlay]: (webcamPlacement === 'floating'),
     });
 
-    const containerClassName = cx({
-      [styles.container]: true,
-      [styles.containerV]: webcamsPlacement === 'top' || webcamsPlacement === 'bottom' || webcamsPlacement === 'floating',
-      [styles.containerH]: webcamsPlacement === 'left' || webcamsPlacement === 'right',
-    });
+    const { viewParticipantsWebcams } = Settings.dataSaving;
+    const fullHeight = usersVideo.length < 1 || (webcamPlacement === 'floating') || !viewParticipantsWebcams;
 
     return (
       <div
         id="container"
-        className={containerClassName}
+        className={cx(styles.container)}
         ref={this.refContainer}
       >
         <div
           className={!swapLayout ? contentClassName : overlayClassName}
           style={{
-            maxHeight: usersVideo.length > 0
-            && (
-              webcamsPlacement !== 'left'
-              || webcamsPlacement !== 'right'
-            )
-            && (
-              webcamsPlacement === 'top'
-              || webcamsPlacement === 'bottom'
-            )
-              ? '80%'
-              : '100%',
-            minHeight: BROWSER_ISMOBILE && window.innerWidth > window.innerHeight ? '50%' : '20%',
-            maxWidth: usersVideo.length > 0
-            && (
-              webcamsPlacement !== 'top'
-              || webcamsPlacement !== 'bottom'
-            )
-            && (
-              webcamsPlacement === 'left'
-              || webcamsPlacement === 'right'
-            )
-              ? '80%'
-              : '100%',
-            minWidth: '20%',
+            maxHeight: fullHeight ? '100%' : '80%',
+            minHeight: '20%',
           }}
         >
           {children}
         </div>
-        {
-          usersVideo.length > 0
-            ? (
-              <WebcamDraggable
-                refMediaContainer={this.refContainer}
-                swapLayout={swapLayout}
-                singleWebcam={singleWebcam}
-                usersVideoLenght={usersVideo.length}
-                hideOverlay={hideOverlay}
-                disableVideo={disableVideo}
-                audioModalIsOpen={audioModalIsOpen}
-                usersVideo={usersVideo}
-              />
-            )
-            : null
-        }
+        {usersVideo.length > 0 ? (
+          <WebcamDraggable
+            refMediaContainer={this.refContainer}
+            swapLayout={swapLayout}
+            singleWebcam={singleWebcam}
+            usersVideoLenght={usersVideo.length}
+            hideOverlay={hideOverlay}
+            disableVideo={disableVideo}
+            audioModalIsOpen={audioModalIsOpen}
+            usersVideo={usersVideo}
+          />
+        ) : null}
       </div>
     );
   }

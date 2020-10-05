@@ -1,21 +1,17 @@
 import React from 'react';
-import { Meteor } from 'meteor/meteor';
 import { withTracker } from 'meteor/react-meteor-data';
+
 import Service from './service';
-import PresentationService from '../service';
-import Uploader from './component';
+import PresentationUploader from './component';
 
-const PRESENTATION_CONFIG = Meteor.settings.public.presentation;
-
-const UploaderContainer = props => <Uploader {...props} />;
+const PresentationUploaderContainer = props => (
+  <PresentationUploader {...props} />
+);
 
 export default withTracker(() => {
+  const PRESENTATION_CONFIG = Meteor.settings.public.presentation;
   const currentPresentations = Service.getPresentations();
-  const {
-    dispatchDisableDownloadable,
-    dispatchEnableDownloadable,
-    dispatchTogglePresentationDownloadable,
-  } = Service;
+  const { dispatchDisableDownloadable, dispatchEnableDownloadable, dispatchTogglePresentationDownloadable } = Service;
 
   return {
     presentations: currentPresentations,
@@ -32,8 +28,5 @@ export default withTracker(() => {
     dispatchDisableDownloadable,
     dispatchEnableDownloadable,
     dispatchTogglePresentationDownloadable,
-    isOpen: Session.get('showUploadPresentationView') || false,
-    selectedToBeNextCurrent: Session.get('selectedToBeNextCurrent') || null,
-    isPresenter: PresentationService.isPresenter('DEFAULT_PRESENTATION_POD'),
   };
-})(UploaderContainer);
+})(PresentationUploaderContainer);

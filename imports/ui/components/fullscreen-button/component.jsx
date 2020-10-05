@@ -22,6 +22,7 @@ const propTypes = {
   elementName: PropTypes.string,
   className: PropTypes.string,
   handleToggleFullScreen: PropTypes.func.isRequired,
+  tooltipDistance: PropTypes.number,
 };
 
 const defaultProps = {
@@ -32,6 +33,7 @@ const defaultProps = {
   elementName: '',
   className: '',
   fullscreenRef: null,
+  tooltipDistance: -1,
 };
 
 const FullscreenButtonComponent = ({
@@ -39,6 +41,7 @@ const FullscreenButtonComponent = ({
   dark,
   bottom,
   elementName,
+  tooltipDistance,
   className,
   fullscreenRef,
   handleToggleFullScreen,
@@ -70,6 +73,7 @@ const FullscreenButtonComponent = ({
         label={formattedLabel}
         hideLabel
         className={cx(styles.button, styles.fullScreenButton, className)}
+        tooltipDistance={tooltipDistance}
         data-test="presentationFullscreenButton"
       />
     </div>

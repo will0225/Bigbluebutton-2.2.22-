@@ -172,7 +172,7 @@ const DesktopShare = ({
   return shouldAllowScreensharing
     ? (
       <Button
-        className={cx(isVideoBroadcasting || styles.btn)}
+        className={cx(styles.button, isVideoBroadcasting || styles.btn)}
         disabled={(!isMeteorConnected && !isVideoBroadcasting) || !screenshareDataSavingSetting}
         icon={isVideoBroadcasting ? 'desktop' : 'desktop_off'}
         label={intl.formatMessage(vLabel)}

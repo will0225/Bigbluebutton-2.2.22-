@@ -48,9 +48,7 @@ class UserNotes extends Component {
   componentDidMount() {
     const { revs } = this.props;
 
-    const lastRevs = NoteService.getLastRevs();
-
-    if (revs !== 0 && revs > lastRevs) this.setState({ unread: true });
+    if (revs !== 0) this.setState({ unread: true });
   }
 
   componentDidUpdate(prevProps) {
@@ -93,7 +91,7 @@ class UserNotes extends Component {
       >
         <Icon iconName="copy" />
         <div aria-hidden>
-          <div className={styles.noteTitle} data-test="sharedNotes">
+          <div className={styles.noteTitle}>
             {intl.formatMessage(intlMessages.sharedNotes)}
           </div>
           {disableNote

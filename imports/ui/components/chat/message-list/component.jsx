@@ -1,20 +1,18 @@
 import React, { Component } from 'react';
-import { findDOMNode } from 'react-dom';
 import PropTypes from 'prop-types';
 import { defineMessages, injectIntl } from 'react-intl';
 import _ from 'lodash';
+import fastdom from 'fastdom';
 import Button from '/imports/ui/components/button/component';
-import {
-  List, AutoSizer, CellMeasurer, CellMeasurerCache,
-} from 'react-virtualized';
 import { styles } from './styles';
-import MessageListItemContainer from './message-list-item/container';
+import MessageListItem from './message-list-item/component';
 
 const propTypes = {
   messages: PropTypes.arrayOf(PropTypes.object).isRequired,
   scrollPosition: PropTypes.number,
   chatId: PropTypes.string.isRequired,
   hasUnreadMessages: PropTypes.bool.isRequired,
+  partnerIsLoggedOut: PropTypes.bool.isRequired,
   handleScrollUpdate: PropTypes.func.isRequired,
   intl: PropTypes.shape({
     formatMessage: PropTypes.func.isRequired,
@@ -43,103 +41,107 @@ const intlMessages = defineMessages({
 class MessageList extends Component {
   constructor(props) {
     super(props);
-    this.cache = new CellMeasurerCache({
-      fixedWidth: true,
-      minHeight: 18,
-    });
 
     this.shouldScrollBottom = false;
     this.lastKnowScrollPosition = 0;
     this.ticking = false;
     this.handleScrollChange = _.debounce(this.handleScrollChange.bind(this), 150);
     this.handleScrollUpdate = _.debounce(this.handleScrollUpdate.bind(this), 150);
-    this.rowRender = this.rowRender.bind(this);
-    this.resizeRow = this.resizeRow.bind(this);
-    this.systemMessagesResized = {};
 
-    this.scrollToBottom = this.scrollToBottom.bind(this);
-    this.state = {
-      scrollArea: null,
-      shouldScrollToBottom: true,
-      shouldScrollToPosition: false,
-      scrollPosition: 0,
-    };
-
-    this.listRef = null;
-    this.virualRef = null;
-
-    this.lastWidth = 0;
+    this.state = {};
   }
+
 
   componentDidMount() {
     const {
       scrollPosition,
     } = this.props;
+
+    const { scrollArea } = this;
+
+    this.setState({
+      scrollArea,
+    });
+
     this.scrollTo(scrollPosition);
+    scrollArea.addEventListener('scroll', this.handleScrollChange, false);
+  }
 
-    const { childNodes } = this.messageListWrapper;
-    this.virualRef = childNodes ? childNodes[0].firstChild : null;
+  componentWillReceiveProps(nextProps) {
+    const {
+      chatId,
+    } = this.props;
 
-    if (this.virualRef) {
-      this.virualRef.style.direction = document.documentElement.dir;
+    if (chatId !== nextProps.chatId) {
+      const { scrollArea } = this;
+      this.handleScrollUpdate(scrollArea.scrollTop, scrollArea);
     }
   }
 
-  componentDidUpdate(prevProps) {
-    if (this.virualRef) {
-      if (this.virualRef.style.direction !== document.documentElement.dir) {
-        this.virualRef.style.direction = document.documentElement.dir;
-      }
-    }
-
+  shouldComponentUpdate(nextProps, nextState) {
     const {
-      scrollPosition,
       chatId,
-      messages,
+      hasUnreadMessages,
+      partnerIsLoggedOut,
     } = this.props;
-    const {
-      scrollPosition: prevScrollPosition,
-      messages: prevMessages,
-      chatId: prevChatId,
-    } = prevProps;
 
     const {
       scrollArea,
-      shouldScrollToPosition,
-      scrollPosition: scrollPositionState,
-      shouldScrollToBottom,
     } = this.state;
 
-    if (prevChatId !== chatId) {
-      this.cache.clearAll();
-      setTimeout(() => this.scrollTo(scrollPosition), 300);
-    } else if (prevMessages && messages) {
-      if (prevMessages.length > messages.length) {
-        // the chat has been cleared
-        this.cache.clearAll();
-      } else {
-        prevMessages.forEach((prevMessage, index) => {
-          const newMessage = messages[index];
-          if (newMessage.content.length > prevMessage.content.length
-              || newMessage.id !== prevMessage.id) {
-            this.resizeRow(index);
-          }
-        });
-      }
+    if (!scrollArea && nextState.scrollArea) return true;
+
+    const switchingCorrespondent = chatId !== nextProps.chatId;
+    const hasNewUnreadMessages = hasUnreadMessages !== nextProps.hasUnreadMessages;
+
+    // check if the messages include <user has left the meeting>
+    const lastMessage = nextProps.messages[nextProps.messages.length - 1];
+    if (lastMessage) {
+      const userLeftIsDisplayed = lastMessage.id.includes('partner-disconnected');
+      if (!(partnerIsLoggedOut && userLeftIsDisplayed)) return true;
     }
 
-    if (!shouldScrollToBottom && !scrollPosition && prevScrollPosition) {
-      this.scrollToBottom();
+    if (switchingCorrespondent || hasNewUnreadMessages) return true;
+
+    return false;
+  }
+
+  componentWillUpdate(nextProps) {
+    const {
+      chatId,
+    } = this.props;
+
+    if (chatId !== nextProps.chatId) {
+      this.shouldScrollBottom = false;
+      return;
     }
 
-    if (shouldScrollToPosition && scrollArea.scrollTop === scrollPositionState) {
-      this.setState({ shouldScrollToPosition: false });
-    }
+    const { scrollArea } = this;
 
-    if (prevMessages.length < messages.length) {
-      // this.resizeRow(prevMessages.length - 1);
-      // messages.forEach((i, idx) => this.resizeRow(idx));
+    const position = scrollArea.scrollTop + scrollArea.offsetHeight;
+
+    // Compare with <1 to account for the chance scrollArea.scrollTop is a float
+    // value in some browsers.
+    this.shouldScrollBottom = nextProps.scrollPosition === null
+      || position === scrollArea.scrollHeight
+      || (scrollArea.scrollHeight - position < 1);
+  }
+
+  componentDidUpdate(prevProps) {
+    const { scrollPosition, chatId } = this.props;
+
+    if (this.shouldScrollBottom) {
+      this.scrollTo();
+    } else if (prevProps.chatId !== chatId) {
+      this.scrollTo(scrollPosition);
     }
+  }
+
+  componentWillUnmount() {
+    const { scrollArea } = this;
+
+    this.handleScrollUpdate(scrollArea.scrollTop, scrollArea);
+    scrollArea.removeEventListener('scroll', this.handleScrollChange, false);
   }
 
   handleScrollUpdate(position, target) {
@@ -148,33 +150,20 @@ class MessageList extends Component {
     } = this.props;
 
     if (position !== null && position + target.offsetHeight === target.scrollHeight) {
-      // I used one because the null value is used to notify that
-      // the user has sent a message and the message list should scroll to bottom
-      handleScrollUpdate(1);
+      handleScrollUpdate(null);
       return;
     }
 
-    handleScrollUpdate(position || 1);
+    handleScrollUpdate(position);
   }
 
   handleScrollChange(e) {
-    const { scrollArea } = this.state;
-    const scrollCursorPosition = e.scrollTop + scrollArea.offsetHeight;
-    const shouldScrollBottom = e.scrollTop === null
-      || scrollCursorPosition === scrollArea.scrollHeight
-      || (scrollArea.scrollHeight - scrollCursorPosition < 1);
-
-    if ((e.scrollTop < this.lastKnowScrollPosition) && !shouldScrollBottom) {
-      this.setState({ shouldScrollToBottom: false });
-    }
-    this.lastKnowScrollPosition = e.scrollTop;
+    this.lastKnowScrollPosition = e.target.scrollTop;
 
     if (!this.ticking) {
       window.requestAnimationFrame(() => {
         const position = this.lastKnowScrollPosition;
-        if (scrollArea) {
-          this.handleScrollUpdate(position, scrollArea);
-        }
+        this.handleScrollUpdate(position, e.target);
         this.ticking = false;
       });
     }
@@ -182,83 +171,31 @@ class MessageList extends Component {
     this.ticking = true;
   }
 
-  resizeRow(idx) {
-    this.cache.clear(idx);
-    if (this.listRef) {
-      this.listRef.recomputeRowHeights(idx);
-      //    this.listRef.forceUpdate();
-    }
-  }
-
   scrollTo(position = null) {
-    if (position) {
-      setTimeout(() => this.setState({
-        shouldScrollToPosition: true,
-        shouldScrollToBottom: false,
-        scrollPosition: position,
-      }), 200);
-    }
-  }
+    const { scrollArea } = this;
 
-  rowRender({
-    index,
-    parent,
-    style,
-    key,
-  }) {
-    const {
-      messages,
-      handleReadMessage,
-      lastReadMessageTime,
-      id,
-    } = this.props;
-    const { scrollArea } = this.state;
-    const message = messages[index];
+    if (position === null) {
+      fastdom.measure(() => {
+        const {
+          scrollHeight,
+          clientHeight,
+        } = scrollArea;
 
-    // it's to get an accurate size of the welcome message because it changes after initial render
+        fastdom.mutate(() => {
+          scrollArea.scrollTop = scrollHeight - clientHeight;
+        });
+      });
 
-    if (message.sender === null && !this.systemMessagesResized[index]) {
-      setTimeout(() => this.resizeRow(index), 500);
-      this.systemMessagesResized[index] = true;
+      return;
     }
 
-    return (
-      <CellMeasurer
-        key={key}
-        cache={this.cache}
-        columnIndex={0}
-        parent={parent}
-        rowIndex={index}
-      >
-        <span
-          style={style}
-          key={key}
-        >
-          <MessageListItemContainer
-            style={style}
-            handleReadMessage={handleReadMessage}
-            key={key}
-            message={message}
-            messageId={message.id}
-            chatAreaId={id}
-            lastReadMessageTime={lastReadMessageTime}
-            scrollArea={scrollArea}
-          />
-        </span>
-      </CellMeasurer>
-    );
-  }
-
-  scrollToBottom() {
-    this.setState({ shouldScrollToBottom: true });
+    fastdom.mutate(() => {
+      scrollArea.scrollTop = position;
+    });
   }
 
   renderUnreadNotification() {
-    const {
-      intl,
-      hasUnreadMessages,
-      scrollPosition,
-    } = this.props;
+    const { intl, hasUnreadMessages, scrollPosition } = this.props;
 
     if (hasUnreadMessages && scrollPosition !== null) {
       return (
@@ -267,9 +204,8 @@ class MessageList extends Component {
           className={styles.unreadButton}
           color="primary"
           size="sm"
-          key="unread-messages"
           label={intl.formatMessage(intlMessages.moreMessages)}
-          onClick={this.scrollToBottom}
+          onClick={() => this.scrollTo()}
         />
       );
     }
@@ -279,57 +215,41 @@ class MessageList extends Component {
 
   render() {
     const {
-      messages,
+      messages, intl, id, lastReadMessageTime, handleReadMessage,
     } = this.props;
+
     const {
       scrollArea,
-      shouldScrollToBottom,
-      shouldScrollToPosition,
-      scrollPosition,
     } = this.state;
 
+    const isEmpty = messages.length === 0;
     return (
-      [<div className={styles.messageListWrapper} key="chat-list" data-test="chatMessages" ref={node => this.messageListWrapper = node}>
-        <AutoSizer>
-          {({ height, width }) => {
-            if (width !== this.lastWidth) {
-              this.lastWidth = width;
-              this.cache.clearAll();
-            }
-
-            return (
-              <List
-                ref={(ref) => {
-                  if (ref !== null) {
-                    this.listRef = ref;
-
-                    if (!scrollArea) {
-                      this.setState({ scrollArea: findDOMNode(this.listRef) });
-                    }
-                  }
-                }}
-                rowHeight={this.cache.rowHeight}
-                className={styles.messageList}
-                rowRenderer={this.rowRender}
-                rowCount={messages.length}
-                height={height}
-                width={width}
-                overscanRowCount={5}
-                deferredMeasurementCache={this.cache}
-                onScroll={this.handleScrollChange}
-                scrollToIndex={shouldScrollToBottom ? messages.length - 1 : undefined}
-                scrollTop={
-                    (shouldScrollToPosition && scrollPosition)
-                    && (scrollArea && scrollArea.scrollHeight >= scrollPosition)
-                      ? scrollPosition : undefined
-                  }
-                scrollToAlignment="end"
-              />
-            );
-          }}
-        </AutoSizer>
-      </div>,
-      this.renderUnreadNotification()]
+      <div className={styles.messageListWrapper}>
+        <div
+          role="log"
+          ref={(ref) => { if (ref != null) { this.scrollArea = ref; } }}
+          id={id}
+          className={styles.messageList}
+          aria-live="polite"
+          aria-atomic="false"
+          aria-relevant="additions"
+          aria-label={isEmpty ? intl.formatMessage(intlMessages.emptyLogLabel) : ''}
+        >
+          {messages.map(message => (
+            <MessageListItem
+              handleReadMessage={handleReadMessage}
+              key={message.id}
+              messages={message.content}
+              user={message.sender}
+              time={message.time}
+              chatAreaId={id}
+              lastReadMessageTime={lastReadMessageTime}
+              scrollArea={scrollArea}
+            />
+          ))}
+        </div>
+        {this.renderUnreadNotification()}
+      </div>
     );
   }
 }

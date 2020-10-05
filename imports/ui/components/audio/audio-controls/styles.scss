@@ -5,39 +5,31 @@
   display: flex;
   flex-flow: row;
 
-  .muteToggle {
-    margin-right: var(--sm-padding-x);
-    margin-left: 0;
+  > * {
+    margin: 0 var(--sm-padding-x);
 
     @include mq($small-only) {
-      margin-right: var(--sm-padding-y);
-    }
-
-    [dir="rtl"] & {
-      margin-left: var(--sm-padding-x);
-      margin-right: 0;
-
-      @include mq($small-only) {
-        margin-left: var(--sm-padding-y);
-      }
+      margin: 0 var(--sm-padding-y);
     }
   }
-  
-  > :last-child {
-    margin-left: var(--sm-padding-x);
-    margin-right: 0;
 
-    @include mq($small-only) {
-      margin-left: var(--sm-padding-y);
+  > :first-child {
+    margin-left: 0;
+    margin-right: inherit;
+
+    [dir="rtl"] & {
+      margin-left: inherit;
+      margin-right: 0;
     }
+  }
+
+  > :last-child {
+      margin-left: inherit;
+      margin-right: 0;
 
     [dir="rtl"] & {
       margin-left: 0;
-      margin-right: var(--sm-padding-x);
-
-      @include mq($small-only) {
-        margin-right: var(--sm-padding-y);
-      }
+      margin-right: inherit;
     }
   }
 }

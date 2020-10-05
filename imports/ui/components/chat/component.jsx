@@ -8,7 +8,7 @@ import withShortcutHelper from '/imports/ui/components/shortcut-help/service';
 import { styles } from './styles.scss';
 import MessageForm from './message-form/container';
 import MessageList from './message-list/container';
-import ChatDropdownContainer from './chat-dropdown/container';
+import ChatDropdown from './chat-dropdown/component';
 
 const ELEMENT_ID = 'chat-messages';
 
@@ -49,7 +49,7 @@ const Chat = (props) => {
 
   return (
     <div
-      data-test={chatID !== 'public' ? 'privateChat' : 'publicChat'}
+      data-test="publicChat"
       className={styles.chat}
     >
       <header className={styles.header}>
@@ -61,7 +61,6 @@ const Chat = (props) => {
             onClick={() => {
               Session.set('idChatOpen', '');
               Session.set('openPanel', 'userlist');
-              window.dispatchEvent(new Event('panelChanged'));
             }}
             aria-label={intl.formatMessage(intlMessages.hideChatLabel, { 0: title })}
             accessKey={HIDE_CHAT_AK}
@@ -83,14 +82,13 @@ const Chat = (props) => {
                   actions.handleClosePrivateChat(chatID);
                   Session.set('idChatOpen', '');
                   Session.set('openPanel', 'userlist');
-                  window.dispatchEvent(new Event('panelChanged'));
                 }}
                 aria-label={intl.formatMessage(intlMessages.closeChatLabel, { 0: title })}
                 label={intl.formatMessage(intlMessages.closeChatLabel, { 0: title })}
                 accessKey={CLOSE_CHAT_AK}
               />
             )
-            : <ChatDropdownContainer {...{ meetingIsBreakout, isMeteorConnected, amIModerator }} />
+            : <ChatDropdown {...{ meetingIsBreakout, isMeteorConnected, amIModerator }} />
         }
       </header>
       <MessageList

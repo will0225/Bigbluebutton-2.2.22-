@@ -9,27 +9,23 @@ class Send extends Page {
     super('chat-send');
   }
 
-  async test(testName) {
+  async test() {
     await util.openChat(this);
 
-    // 0 messages
-    const chat0 = await this.page.$$(`${e.chatUserMessage} ${e.chatMessageText}`);
-    if (process.env.GENERATE_EVIDENCES === 'true') {
-      await this.screenshot(`${testName}`, `01-before-chat-message-send-[${testName}]`);
-    }
-    // send a message
-    await this.type(e.chatBox, e.message);
-    if (process.env.GENERATE_EVIDENCES === 'true') {
-      await this.screenshot(`${testName}`, `02-typing-chat-message-[${testName}]`);
-    }
-    await this.click(e.sendButton);
-    if (process.env.GENERATE_EVIDENCES === 'true') {
-      await this.screenshot(`${testName}`, `03-after-chat-message-send-[${testName}]`);
-    }
+    // Must be:
+    // []
+    const chat0 = await util.getTestElements(this);
 
-    // 1 message
-    const chat1 = await this.page.$$(`${e.chatUserMessage} ${e.chatMessageText}`);
-    const response = chat0.length === 0 && chat1.length === 1;
+    await this.type(e.chatBox, e.message);
+    await this.click(e.sendButton);
+    await this.screenshot(true);
+
+    // Must be:
+    // [{ "name": "User1\nXX:XX XM", "message": "Hello world!" }]
+    const chat1 = await util.getTestElements(this);
+
+    const response = chat0.length == 0
+      && chat1[0].message == e.message;
 
     return response;
   }

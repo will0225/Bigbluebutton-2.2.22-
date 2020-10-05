@@ -223,8 +223,8 @@ class VideoPreview extends Component {
       previewError: null,
     };
 
-    this.userParameterProfile = VideoService.getUserParameterProfile();
     this.mirrorOwnWebcam = VideoService.mirrorOwnWebcam();
+    this.userParameterProfile = VideoService.getUserParameterProfile();
   }
 
   componentDidMount() {
@@ -497,7 +497,7 @@ class VideoPreview extends Component {
     const {
       intl,
       skipVideoPreview,
-      sharedDevices,
+      sharedDevices
     } = this.props;
 
     const {
@@ -537,42 +537,42 @@ class VideoPreview extends Component {
           )
         }
         { shared
-          ? (
-            <span className={styles.label}>
-              {intl.formatMessage(intlMessages.sharedCameraLabel)}
-            </span>
-          )
-          : (
-            <span>
-              <label className={styles.label} htmlFor="setQuality">
-                {intl.formatMessage(intlMessages.qualityLabel)}
-              </label>
-              { availableProfiles && availableProfiles.length > 0
-                ? (
-                  <select
-                    id="setQuality"
-                    value={selectedProfile || ''}
-                    className={styles.select}
-                    onChange={this.handleSelectProfile}
-                    disabled={skipVideoPreview}
-                  >
-                    {availableProfiles.map(profile => {
-                     const label = intlMessages[`${profile.id}`]
-                      ? intl.formatMessage(intlMessages[`${profile.id}`])
-                      : profile.name;
+           ? (
+             <span className={styles.label}>
+               {intl.formatMessage(intlMessages.sharedCameraLabel)}
+             </span>
+           )
+           : (
+             <span>
+               <label className={styles.label} htmlFor="setQuality">
+                 {intl.formatMessage(intlMessages.qualityLabel)}
+               </label>
+               { availableProfiles && availableProfiles.length > 0
+                 ? (
+                   <select
+                     id="setQuality"
+                     value={selectedProfile || ''}
+                     className={styles.select}
+                     onChange={this.handleSelectProfile}
+                     disabled={skipVideoPreview}
+                   >
+                     {availableProfiles.map(profile => { 
+                      const label = intlMessages[`${profile.id}`] 
+                        ? intl.formatMessage(intlMessages[`${profile.id}`])
+                        : profile.name;
 
-                     return (
-                      <option key={profile.id} value={profile.id}>
-                        {`${label} ${profile.id === 'hd' ? '' : intl.formatMessage(intlMessages.qualityLabel).toLowerCase()}`}
-                      </option>
-                    )})}
-                  </select>
-                )
-                : (
-                  <span>
-                    {intl.formatMessage(intlMessages.profileNotFoundLabel)}
-                  </span>
-                )
+                      return (
+                       <option key={profile.id} value={profile.id}>
+                          {`${label} ${profile.id === 'hd' ? '' : intl.formatMessage(intlMessages.qualityLabel).toLowerCase()}`}
+                       </option>
+                     )})}
+                   </select>
+                 )
+                 : (
+                   <span>
+                     {intl.formatMessage(intlMessages.profileNotFoundLabel)}
+                   </span>
+                 )
                }
             </span>
           )
@@ -623,7 +623,6 @@ class VideoPreview extends Component {
                 : (
                   <video
                     id="preview"
-                    data-test="videoPreview"
                     className={cx({
                       [styles.preview]: true,
                       [styles.mirroredVideo]: this.mirrorOwnWebcam,
@@ -699,8 +698,7 @@ class VideoPreview extends Component {
               disabled={shouldDisableButtons}
             />
             <Button
-              data-test="startSharingWebcam"
-              color={shared ? 'danger' : 'primary'}
+              color={shared ? "danger" : "primary"}
               label={intl.formatMessage(shared ? intlMessages.stopSharingLabel : intlMessages.startSharingLabel)}
               onClick={shared ? this.handleStopSharing : this.handleStartSharing}
               disabled={isStartSharingDisabled || isStartSharingDisabled === null || shouldDisableButtons}

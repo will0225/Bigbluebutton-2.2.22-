@@ -2,6 +2,7 @@ import { check } from 'meteor/check';
 
 const ANNOTATION_TYPE_TEXT = 'text';
 const ANNOTATION_TYPE_PENCIL = 'pencil';
+
 const DEFAULT_TEXT_WIDTH = 30;
 const DEFAULT_TEXT_HEIGHT = 20;
 

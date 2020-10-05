@@ -10,10 +10,8 @@ import DropdownContent from '/imports/ui/components/dropdown/content/component';
 import DropdownList from '/imports/ui/components/dropdown/list/component';
 import DropdownListItem from '/imports/ui/components/dropdown/list/item/component';
 import LockViewersContainer from '/imports/ui/components/lock-viewers/container';
-import ConnectionStatusContainer from '/imports/ui/components/connection-status/modal/container';
 import BreakoutRoom from '/imports/ui/components/actions-bar/create-breakout-room/container';
 import CaptionsService from '/imports/ui/components/captions/service';
-import ConnectionStatusService from '/imports/ui/components/connection-status/service';
 import CaptionsWriterMenu from '/imports/ui/components/captions/writer-menu/container';
 import DropdownListSeparator from '/imports/ui/components/dropdown/list/separator/component';
 import { styles } from './styles';
@@ -72,14 +70,6 @@ const intlMessages = defineMessages({
     id: 'app.userList.userOptions.lockViewersDesc',
     description: 'Lock viewers description',
   },
-  connectionStatusLabel: {
-    id: 'app.userList.userOptions.connectionStatusLabel',
-    description: 'Connection status label',
-  },
-  connectionStatusDesc: {
-    id: 'app.userList.userOptions.connectionStatusDesc',
-    description: 'Connection status description',
-  },
   muteAllExceptPresenterLabel: {
     id: 'app.userList.userOptions.muteAllExceptPresenterLabel',
     description: 'Mute all except presenter label',
@@ -112,6 +102,18 @@ const intlMessages = defineMessages({
     id: 'app.actionsBar.actionsDropdown.captionsDesc',
     description: 'Captions menu toggle description',
   },
+  savedNamesListTitle: {
+    id: 'app.userList.userOptions.savedNames.title',
+    description: '',
+  },
+  sortedFirstNameHeading: {
+    id: 'app.userList.userOptions.sortedFirstName.heading',
+    description: '',
+  },
+  sortedLastNameHeading: {
+    id: 'app.userList.userOptions.sortedLastName.heading',
+    description: '',
+  },
 });
 
 class UserOptions extends PureComponent {
@@ -126,7 +128,6 @@ class UserOptions extends PureComponent {
     this.muteId = _.uniqueId('list-item-');
     this.muteAllId = _.uniqueId('list-item-');
     this.lockId = _.uniqueId('list-item-');
-    this.connectionStatusId = _.uniqueId('list-item-');
     this.createBreakoutId = _.uniqueId('list-item-');
     this.saveUsersNameId = _.uniqueId('list-item-');
     this.captionsId = _.uniqueId('list-item-');
@@ -142,7 +143,21 @@ class UserOptions extends PureComponent {
   }
 
   onSaveUserNames() {
-    getUserNamesLink().dispatchEvent(new MouseEvent('click',
+    const { intl, meetingName } = this.props;
+    const date = new Date();
+    getUserNamesLink(
+      intl.formatMessage(intlMessages.savedNamesListTitle,
+        {
+          0: meetingName,
+          1: `${date.toLocaleDateString(
+            document.documentElement.lang,
+          )}:${date.toLocaleTimeString(
+            document.documentElement.lang,
+          )}`,
+        }),
+      intl.formatMessage(intlMessages.sortedFirstNameHeading),
+      intl.formatMessage(intlMessages.sortedLastNameHeading),
+    ).dispatchEvent(new MouseEvent('click',
       { bubbles: true, cancelable: true, view: window }));
   }
 
@@ -261,19 +276,9 @@ class UserOptions extends PureComponent {
           onClick={() => mountModal(<LockViewersContainer />)}
         />) : null
       ),
-      (ConnectionStatusService.isEnabled() && isMeteorConnected ? (
-        <DropdownListItem
-          key={this.connectionStatusId}
-          icon="warning"
-          label={intl.formatMessage(intlMessages.connectionStatusLabel)}
-          description={intl.formatMessage(intlMessages.connectionStatusDesc)}
-          onClick={() => mountModal(<ConnectionStatusContainer />)}
-        />) : null
-      ),
       (isMeteorConnected ? <DropdownListSeparator key={_.uniqueId('list-separator-')} /> : null),
       (canCreateBreakout && isMeteorConnected ? (
         <DropdownListItem
-          data-test="createBreakoutRooms"
           key={this.createBreakoutId}
           icon="rooms"
           label={intl.formatMessage(intlMessages.createBreakoutRoom)}
@@ -283,7 +288,6 @@ class UserOptions extends PureComponent {
       ),
       (canInviteUsers && isMeteorConnected ? (
         <DropdownListItem
-          data-test="inviteBreakoutRooms"
           icon="rooms"
           label={intl.formatMessage(intlMessages.invitationItem)}
           key={this.createBreakoutId}
@@ -322,7 +326,6 @@ class UserOptions extends PureComponent {
         <DropdownTrigger tabIndex={0}>
           <Button
             label={intl.formatMessage(intlMessages.optionsLabel)}
-            data-test="manageUsers"
             icon="settings"
             ghost
             color="primary"

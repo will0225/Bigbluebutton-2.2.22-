@@ -123,7 +123,6 @@ class VideoListItem extends Component {
 
     return (
       <FullscreenButtonContainer
-        data-test="presentationFullscreenButton"
         fullscreenRef={this.videoContainer}
         elementName={name}
         isFullscreen={isFullscreen}
@@ -158,7 +157,7 @@ class VideoListItem extends Component {
       >
         {
           !videoIsReady &&
-            <div data-test="webcamConnecting" className={styles.connecting}>
+            <div className={styles.connecting}>
               <span className={styles.loadingText}>{name}</span>
             </div>
         }
@@ -168,7 +167,6 @@ class VideoListItem extends Component {
         >
           <video
             muted
-            data-test="videoContainer"
             className={cx({
               [styles.media]: true,
               [styles.cursorGrab]: !webcamDraggableState.dragging
