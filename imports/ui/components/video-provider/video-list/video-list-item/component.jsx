@@ -31,7 +31,7 @@ class VideoListItem extends Component {
       isFullscreen: false,
     };
 
-    this.mirrorOwnWebcam = VideoService.mirrorOwnWebcam(props.user);
+    this.mirrorOwnWebcam = VideoService.mirrorOwnWebcam(props.userId);
 
     this.setVideoIsReady = this.setVideoIsReady.bind(this);
     this.onFullscreenChange = this.onFullscreenChange.bind(this);
@@ -62,10 +62,6 @@ class VideoListItem extends Component {
             const tagFailedEvent = new CustomEvent('videoPlayFailed', { detail: { mediaTag: elem } });
             window.dispatchEvent(tagFailedEvent);
           }
-          logger.warn({
-            logCode: 'videolistitem_component_play_maybe_error',
-            extraInfo: { error },
-          }, `Could not play video tag due to ${error.name}`);
         });
       }
     };
@@ -127,6 +123,7 @@ class VideoListItem extends Component {
 
     return (
       <FullscreenButtonContainer
+        data-test="presentationFullscreenButton"
         fullscreenRef={this.videoContainer}
         elementName={name}
         isFullscreen={isFullscreen}
@@ -161,7 +158,7 @@ class VideoListItem extends Component {
       >
         {
           !videoIsReady &&
-            <div className={styles.connecting}>
+            <div data-test="webcamConnecting" className={styles.connecting}>
               <span className={styles.loadingText}>{name}</span>
             </div>
         }
@@ -171,6 +168,7 @@ class VideoListItem extends Component {
         >
           <video
             muted
+            data-test="videoContainer"
             className={cx({
               [styles.media]: true,
               [styles.cursorGrab]: !webcamDraggableState.dragging

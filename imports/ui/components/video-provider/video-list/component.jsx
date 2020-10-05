@@ -9,6 +9,8 @@ import { withDraggableConsumer } from '../../media/webcam-draggable-overlay/cont
 import AutoplayOverlay from '../../media/autoplay-overlay/component';
 import logger from '/imports/startup/client/logger';
 import playAndRetry from '/imports/utils/mediaElementPlayRetry';
+import VideoService from '/imports/ui/components/video-provider/service';
+import Button from '/imports/ui/components/button/component';
 
 const propTypes = {
   streams: PropTypes.arrayOf(PropTypes.object).isRequired,
@@ -16,6 +18,8 @@ const propTypes = {
   webcamDraggableDispatch: PropTypes.func.isRequired,
   intl: PropTypes.objectOf(Object).isRequired,
   swapLayout: PropTypes.bool.isRequired,
+  numberOfPages: PropTypes.number.isRequired,
+  currentVideoPageIndex: PropTypes.number.isRequired,
 };
 
 const intlMessages = defineMessages({
@@ -36,6 +40,12 @@ const intlMessages = defineMessages({
   },
   autoplayAllowLabel: {
     id: 'app.videoDock.autoplayAllowLabel',
+  },
+  nextPageLabel: {
+    id: 'app.video.pagination.nextPage',
+  },
+  prevPageLabel: {
+    id: 'app.video.pagination.prevPage',
   },
 });
 
@@ -102,16 +112,18 @@ class VideoList extends Component {
 
     this.handleCanvasResize();
     window.addEventListener('resize', this.handleCanvasResize, false);
+    window.addEventListener('layoutSizesSets', this.handleCanvasResize, false);
     window.addEventListener('videoPlayFailed', this.handlePlayElementFailed);
   }
 
   componentWillUnmount() {
     window.removeEventListener('resize', this.handleCanvasResize, false);
+    window.removeEventListener('layoutSizesSets', this.handleCanvasResize, false);
     window.removeEventListener('videoPlayFailed', this.handlePlayElementFailed);
   }
 
   setOptimalGrid() {
-    const { streams } = this.props;
+    const { streams, webcamDraggableDispatch } = this.props;
     let numItems = streams.length;
     if (numItems < 1 || !this.canvas || !this.grid) {
       return;
@@ -137,6 +149,12 @@ class VideoList extends Component {
         const betterThanCurrent = testGrid.filledArea > currentGrid.filledArea;
         return focusedConstraint && betterThanCurrent ? testGrid : currentGrid;
       }, { filledArea: 0 });
+    webcamDraggableDispatch(
+      {
+        type: 'setOptimalGrid',
+        value: optimalGrid,
+      },
+    );
     this.setState({
       optimalGrid,
     });
@@ -199,6 +217,54 @@ class VideoList extends Component {
       });
     }
     this.ticking = true;
+  }
+
+  renderNextPageButton() {
+    const { intl, numberOfPages, currentVideoPageIndex } = this.props;
+
+    if (!VideoService.isPaginationEnabled() || numberOfPages <= 1) return null;
+
+    const currentPage = currentVideoPageIndex + 1;
+    const nextPageLabel = intl.formatMessage(intlMessages.nextPageLabel);
+    const nextPageDetailedLabel = `${nextPageLabel} (${currentPage}/${numberOfPages})`;
+
+    return (
+      <Button
+        role="button"
+        aria-label={nextPageLabel}
+        color="primary"
+        icon="right_arrow"
+        size="md"
+        onClick={VideoService.getNextVideoPage}
+        label={nextPageDetailedLabel}
+        hideLabel
+        className={cx(styles.nextPage)}
+      />
+    );
+  }
+
+  renderPreviousPageButton() {
+    const { intl, currentVideoPageIndex, numberOfPages } = this.props;
+
+    if (!VideoService.isPaginationEnabled() || numberOfPages <= 1) return null;
+
+    const currentPage = currentVideoPageIndex + 1;
+    const prevPageLabel = intl.formatMessage(intlMessages.prevPageLabel);
+    const prevPageDetailedLabel = `${prevPageLabel} (${currentPage}/${numberOfPages})`;
+
+    return (
+      <Button
+        role="button"
+        aria-label={prevPageLabel}
+        color="primary"
+        icon="left_arrow"
+        size="md"
+        onClick={VideoService.getPreviousVideoPage}
+        label={prevPageDetailedLabel}
+        hideLabel
+        className={cx(styles.previousPage)}
+      />
+    );
   }
 
   renderVideoList() {
@@ -269,6 +335,9 @@ class VideoList extends Component {
         }}
         className={canvasClassName}
       >
+
+        {this.renderPreviousPageButton()}
+
         {!streams.length ? null : (
           <div
             ref={(ref) => {
@@ -292,6 +361,9 @@ class VideoList extends Component {
             handleAllowAutoplay={this.handleAllowAutoplay}
           />
         )}
+
+        {this.renderNextPageButton()}
+
       </div>
     );
   }
